@@ -1,0 +1,36 @@
+name: pre-commit-autofix
+
+on:
+  pull_request:
+  push:
+
+permissions:
+  contents: write   # ← erlaubt Auto-Fixes in PRs
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # wichtig für commit push
+
+      - uses: actions/setup-python@v5
+
+      - name: Install pre-commit
+        run: pip install pre-commit
+
+      - name: Run pre-commit
+        id: precommit
+        run: |
+          pre-commit run --all-files --show-diff-on-failure || echo "needs_fix=true" >> $GITHUB_OUTPUT
+
+      - name: Commit fixes
+        if: steps.precommit.outputs.needs_fix == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "pre-commit auto-fix"
+          git push
